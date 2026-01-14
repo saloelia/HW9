@@ -1,0 +1,203 @@
+# DeepFake Detector Configuration
+# This file contains all configurable parameters for the detection system
+
+# ===========================================
+# Agent Configuration
+# ===========================================
+agent:
+  # Maximum iterations for the agent reasoning loop
+  max_iterations: 10
+
+  # Temperature for LLM responses (0.0 - 1.0)
+  temperature: 0.3
+
+  # Maximum tokens for LLM response
+  max_tokens: 4096
+
+  # Enable verbose reasoning output
+  verbose: true
+
+  # Timeout for each agent step (seconds)
+  step_timeout: 60
+
+# ===========================================
+# Video Processing Configuration
+# ===========================================
+video:
+  # Supported video formats
+  supported_formats:
+    - mp4
+    - avi
+    - mov
+    - mkv
+    - webm
+
+  # Maximum video duration to process (seconds)
+  max_duration: 300
+
+  # Target resolution for analysis (width x height)
+  target_resolution:
+    width: 640
+    height: 480
+
+  # Frame extraction settings
+  frame_extraction:
+    # Method: "uniform" (evenly spaced) or "keyframe" (scene changes)
+    method: uniform
+    # Maximum frames to extract
+    max_frames: 30
+    # Minimum frames required for analysis
+    min_frames: 5
+
+# ===========================================
+# Face Analysis Configuration
+# ===========================================
+face_analysis:
+  # Face detection confidence threshold
+  detection_confidence: 0.8
+
+  # Minimum face size (pixels)
+  min_face_size: 64
+
+  # Enable facial landmark detection
+  landmarks_enabled: true
+
+  # Number of facial landmarks to detect
+  num_landmarks: 68
+
+  # Face region padding (percentage)
+  face_padding: 0.2
+
+# ===========================================
+# Temporal Analysis Configuration
+# ===========================================
+temporal_analysis:
+  # Blink detection settings
+  blink_detection:
+    enabled: true
+    # Expected blink rate range (blinks per minute)
+    normal_rate_min: 10
+    normal_rate_max: 30
+
+  # Eye movement analysis
+  eye_movement:
+    enabled: true
+    # Threshold for unnatural movement detection
+    anomaly_threshold: 0.7
+
+  # Lip sync analysis
+  lip_sync:
+    enabled: true
+    # Audio-visual correlation threshold
+    sync_threshold: 0.6
+
+# ===========================================
+# Frequency Analysis Configuration
+# ===========================================
+frequency_analysis:
+  # Enable FFT-based analysis
+  fft_enabled: true
+
+  # Frequency bands to analyze
+  frequency_bands:
+    low: [0, 5]
+    mid: [5, 15]
+    high: [15, 30]
+
+  # Noise pattern detection
+  noise_detection:
+    enabled: true
+    threshold: 0.5
+
+# ===========================================
+# Optical Flow Configuration
+# ===========================================
+optical_flow:
+  # Algorithm: "farneback" or "lucas_kanade"
+  algorithm: farneback
+
+  # Flow computation parameters
+  params:
+    pyr_scale: 0.5
+    levels: 3
+    winsize: 15
+    iterations: 3
+    poly_n: 5
+    poly_sigma: 1.2
+
+  # Anomaly detection threshold
+  anomaly_threshold: 0.65
+
+# ===========================================
+# Detection Thresholds
+# ===========================================
+detection:
+  # Overall confidence threshold for FAKE classification
+  fake_threshold: 0.7
+
+  # Minimum evidence required (number of indicators)
+  min_evidence_count: 3
+
+  # Weights for different analysis methods
+  weights:
+    face_consistency: 0.25
+    temporal_patterns: 0.25
+    frequency_analysis: 0.20
+    optical_flow: 0.15
+    ai_reasoning: 0.15
+
+# ===========================================
+# Output Configuration
+# ===========================================
+output:
+  # Generate detailed report
+  detailed_report: true
+
+  # Include visualization in report
+  include_visualizations: true
+
+  # Report format: "json", "html", or "both"
+  report_format: both
+
+  # Save analyzed frames
+  save_frames: false
+
+  # Output directory (relative to project root)
+  output_dir: results
+
+# ===========================================
+# Logging Configuration
+# ===========================================
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: INFO
+
+  # Log format
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # Log to file
+  file_logging: true
+  log_file: logs/deepfake_detector.log
+
+  # Log rotation
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+
+# ===========================================
+# Performance Configuration
+# ===========================================
+performance:
+  # Number of worker processes for parallel processing
+  num_workers: 4
+
+  # Batch size for frame processing
+  batch_size: 8
+
+  # Enable caching for repeated analysis
+  caching_enabled: true
+
+  # Cache directory
+  cache_dir: .cache
+
+  # Maximum cache size (MB)
+  max_cache_size: 1024
