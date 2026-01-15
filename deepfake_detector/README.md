@@ -109,6 +109,52 @@ deepfake-detect path/to/video.mp4 --verbose
 deepfake-detect path/to/video.mp4 --output results/
 ```
 
+### Running Batch Experiments
+
+Run analysis on all videos in the `data/samples/` directory:
+
+```bash
+# Activate virtual environment
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Run batch experiment on all sample videos
+python demo.py --batch
+```
+
+**Directory Structure for Batch Experiments:**
+```
+data/samples/
+├── real/           # Place authentic videos here
+│   ├── video1.mp4
+│   ├── video2.mp4
+│   └── ...
+└── fake/           # Place deepfake videos here
+    ├── deepfake1.mp4
+    ├── deepfake2.mp4
+    └── ...
+```
+
+The batch experiment will:
+1. Automatically find all videos in `data/samples/real/` and `data/samples/fake/`
+2. Analyze each video using the configured LLM
+3. Compare predictions against ground truth (folder location)
+4. Calculate accuracy metrics
+5. Save detailed results to `results/batch_experiment_<timestamp>.json`
+
+**Example Output:**
+```
+  Total Videos Analyzed: 10
+  Overall Accuracy: 8/10 (80.0%)
+
+  Real Video Detection:
+    Correct: 4/5 (80.0%)
+
+  Fake Video Detection:
+    Correct: 4/5 (80.0%)
+
+  Results saved to: results/batch_experiment_20240115_143012.json
+```
+
 ### Using the Agent Directly
 
 ```python

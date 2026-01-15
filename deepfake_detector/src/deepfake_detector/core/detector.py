@@ -14,14 +14,20 @@ Example:
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Optional
+
+from dotenv import load_dotenv
 
 from deepfake_detector.agent.detector_agent import (
     DeepFakeDetectorAgent,
     AgentConfig,
 )
 from deepfake_detector.core.models import AnalysisResult
+
+# Load environment variables
+load_dotenv()
 
 
 logger = logging.getLogger(__name__)
@@ -48,19 +54,24 @@ class DeepFakeDetector:
 
     def __init__(
         self,
-        llm_provider: str = "anthropic",
+        llm_provider: Optional[str] = None,
         model: Optional[str] = None,
         api_key: Optional[str] = None,
         verbose: bool = True,
+        use_llm: bool = True,
+        fake_threshold: float = 0.7,
     ) -> None:
         """
         Initialize the DeepFake detector.
 
         Args:
-            llm_provider: LLM provider to use ("anthropic" or "openai")
-            model: Model identifier (uses default if None)
+            llm_provider: LLM provider to use ("anthropic" or "openai").
+                         Defaults to LLM_PROVIDER env var or "openai".
+            model: Model identifier (uses LLM_MODEL env var or default if None)
             api_key: API key for LLM (uses env var if None)
             verbose: Enable verbose logging
+            use_llm: Whether to use LLM for reasoning (if False, uses rule-based)
+            fake_threshold: Threshold for fake detection (0.0-1.0)
         """
         # Set up logging
         log_level = logging.INFO if verbose else logging.WARNING
@@ -69,20 +80,29 @@ class DeepFakeDetector:
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
 
+        # Read from environment if not provided
+        llm_provider = llm_provider or os.getenv("LLM_PROVIDER", "openai")
+
         # Default models per provider
         default_models = {
             "anthropic": "claude-3-sonnet-20240229",
             "openai": "gpt-4-turbo",
         }
 
+        model = model or os.getenv("LLM_MODEL") or default_models.get(llm_provider, "gpt-4-turbo")
+
         config = AgentConfig(
             llm_provider=llm_provider,
-            model=model or default_models.get(llm_provider, ""),
+            model=model,
             verbose=verbose,
         )
 
-        self.agent = DeepFakeDetectorAgent(config=config, api_key=api_key)
+        # If use_llm is False, don't pass API key to force rule-based mode
+        effective_api_key = api_key if use_llm else None
+
+        self.agent = DeepFakeDetectorAgent(config=config, api_key=effective_api_key)
         self.config = config
+        self.fake_threshold = fake_threshold
 
         logger.info(
             f"DeepFake Detector initialized with {llm_provider} "

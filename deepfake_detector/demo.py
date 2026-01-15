@@ -331,6 +331,184 @@ def analyze_video(video_path: str):
     print(f"    {result.reasoning}")
 
 
+def run_batch_experiment():
+    """Run analysis on all videos in data/samples/real and data/samples/fake folders."""
+    import json
+    from datetime import datetime
+
+    print_section("Batch Experiment: Analyzing All Sample Videos")
+
+    samples_dir = Path(__file__).parent / "data" / "samples"
+    real_dir = samples_dir / "real"
+    fake_dir = samples_dir / "fake"
+
+    # Find all videos
+    video_extensions = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
+
+    real_videos = []
+    fake_videos = []
+
+    if real_dir.exists():
+        real_videos = [p for p in real_dir.iterdir() if p.suffix.lower() in video_extensions]
+    if fake_dir.exists():
+        fake_videos = [p for p in fake_dir.iterdir() if p.suffix.lower() in video_extensions]
+
+    print(f"  Found {len(real_videos)} real video(s) in data/samples/real/")
+    print(f"  Found {len(fake_videos)} fake video(s) in data/samples/fake/")
+
+    if not real_videos and not fake_videos:
+        print("\n  No videos found! Place videos in:")
+        print("    - data/samples/real/ for authentic videos")
+        print("    - data/samples/fake/ for deepfake videos")
+        return None
+
+    # Get LLM configuration from environment
+    llm_provider = os.getenv("LLM_PROVIDER", "openai")
+    llm_model = os.getenv("LLM_MODEL", "gpt-4-turbo")
+
+    print(f"\n  Using LLM Provider: {llm_provider}")
+    print(f"  Using Model: {llm_model}\n")
+
+    # Initialize agent
+    config = AgentConfig(
+        llm_provider=llm_provider,
+        model=llm_model,
+    )
+    agent = DeepFakeDetectorAgent(config=config)
+
+    all_results = []
+
+    # Analyze real videos
+    if real_videos:
+        print("  " + "─" * 50)
+        print("  Analyzing REAL videos...")
+        print("  " + "─" * 50)
+
+        for i, video_path in enumerate(real_videos, 1):
+            print(f"\n  [{i}/{len(real_videos)}] {video_path.name}")
+            try:
+                result = agent.analyze(str(video_path))
+                status = "CORRECT" if result.verdict.value == "REAL" else "INCORRECT"
+                print(f"    Verdict: {result.verdict.value} | Confidence: {result.confidence:.1%} | {status}")
+
+                all_results.append({
+                    "video": video_path.name,
+                    "path": str(video_path),
+                    "ground_truth": "REAL",
+                    "predicted": result.verdict.value,
+                    "confidence": result.confidence,
+                    "correct": result.verdict.value == "REAL",
+                    "reasoning": result.reasoning,
+                    "processing_time": result.processing_time,
+                })
+            except Exception as e:
+                print(f"    ERROR: {e}")
+                all_results.append({
+                    "video": video_path.name,
+                    "path": str(video_path),
+                    "ground_truth": "REAL",
+                    "predicted": "ERROR",
+                    "confidence": 0,
+                    "correct": False,
+                    "error": str(e),
+                })
+
+    # Analyze fake videos
+    if fake_videos:
+        print("\n  " + "─" * 50)
+        print("  Analyzing FAKE videos...")
+        print("  " + "─" * 50)
+
+        for i, video_path in enumerate(fake_videos, 1):
+            print(f"\n  [{i}/{len(fake_videos)}] {video_path.name}")
+            try:
+                result = agent.analyze(str(video_path))
+                status = "CORRECT" if result.verdict.value == "FAKE" else "INCORRECT"
+                print(f"    Verdict: {result.verdict.value} | Confidence: {result.confidence:.1%} | {status}")
+
+                all_results.append({
+                    "video": video_path.name,
+                    "path": str(video_path),
+                    "ground_truth": "FAKE",
+                    "predicted": result.verdict.value,
+                    "confidence": result.confidence,
+                    "correct": result.verdict.value == "FAKE",
+                    "reasoning": result.reasoning,
+                    "processing_time": result.processing_time,
+                })
+            except Exception as e:
+                print(f"    ERROR: {e}")
+                all_results.append({
+                    "video": video_path.name,
+                    "path": str(video_path),
+                    "ground_truth": "FAKE",
+                    "predicted": "ERROR",
+                    "confidence": 0,
+                    "correct": False,
+                    "error": str(e),
+                })
+
+    # Calculate metrics
+    total = len(all_results)
+    correct = sum(1 for r in all_results if r.get("correct", False))
+    errors = sum(1 for r in all_results if r.get("predicted") == "ERROR")
+
+    real_results = [r for r in all_results if r["ground_truth"] == "REAL"]
+    fake_results = [r for r in all_results if r["ground_truth"] == "FAKE"]
+
+    real_correct = sum(1 for r in real_results if r.get("correct", False))
+    fake_correct = sum(1 for r in fake_results if r.get("correct", False))
+
+    # Print summary
+    print("\n\n  " + "═" * 50)
+    print("  EXPERIMENT SUMMARY")
+    print("  " + "═" * 50)
+
+    print(f"\n  Total Videos Analyzed: {total}")
+    print(f"  Overall Accuracy: {correct}/{total} ({100*correct/total:.1f}%)" if total > 0 else "  No videos analyzed")
+
+    if real_results:
+        print(f"\n  Real Video Detection:")
+        print(f"    Correct: {real_correct}/{len(real_results)} ({100*real_correct/len(real_results):.1f}%)")
+
+    if fake_results:
+        print(f"\n  Fake Video Detection:")
+        print(f"    Correct: {fake_correct}/{len(fake_results)} ({100*fake_correct/len(fake_results):.1f}%)")
+
+    if errors > 0:
+        print(f"\n  Errors: {errors}")
+
+    # Save results to JSON
+    results_dir = Path(__file__).parent / "results"
+    results_dir.mkdir(exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    results_file = results_dir / f"batch_experiment_{timestamp}.json"
+
+    experiment_data = {
+        "timestamp": timestamp,
+        "llm_provider": llm_provider,
+        "llm_model": llm_model,
+        "summary": {
+            "total_videos": total,
+            "correct_predictions": correct,
+            "accuracy": correct / total if total > 0 else 0,
+            "real_videos_count": len(real_results),
+            "real_correct": real_correct,
+            "fake_videos_count": len(fake_results),
+            "fake_correct": fake_correct,
+        },
+        "results": all_results,
+    }
+
+    with open(results_file, "w") as f:
+        json.dump(experiment_data, f, indent=2, default=str)
+
+    print(f"\n  Results saved to: {results_file}")
+
+    return experiment_data
+
+
 def main():
     """Main demo function."""
     parser = argparse.ArgumentParser(
@@ -341,6 +519,7 @@ Examples:
   python demo.py                    # Run full demonstration
   python demo.py --quick            # Run quick demo
   python demo.py --video video.mp4  # Analyze a specific video
+  python demo.py --batch            # Run batch experiment on all sample videos
         """
     )
 
@@ -354,12 +533,20 @@ Examples:
         action="store_true",
         help="Run quick demo (tools overview only)"
     )
+    parser.add_argument(
+        "--batch", "-b",
+        action="store_true",
+        help="Run batch experiment on all videos in data/samples/real and data/samples/fake"
+    )
 
     args = parser.parse_args()
 
     print_header()
 
-    if args.video:
+    if args.batch:
+        # Run batch experiment
+        run_batch_experiment()
+    elif args.video:
         # Analyze specific video
         analyze_video(args.video)
     elif args.quick:
