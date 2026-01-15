@@ -7,11 +7,16 @@ It can be run with or without actual video files to showcase the system architec
 """
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
 from typing import Optional
 import numpy as np
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
@@ -298,8 +303,19 @@ def analyze_video(video_path: str):
     print(f"  Video: {path.name}")
     print(f"  Path: {path.absolute()}\n")
 
-    # Initialize agent
-    agent = DeepFakeDetectorAgent()
+    # Get LLM configuration from environment
+    llm_provider = os.getenv("LLM_PROVIDER", "openai")
+    llm_model = os.getenv("LLM_MODEL", "gpt-4-turbo")
+
+    print(f"  Using LLM Provider: {llm_provider}")
+    print(f"  Using Model: {llm_model}\n")
+
+    # Initialize agent with environment config
+    config = AgentConfig(
+        llm_provider=llm_provider,
+        model=llm_model,
+    )
+    agent = DeepFakeDetectorAgent(config=config)
 
     print("  Running analysis...")
     print("  (This may take a few moments)\n")
